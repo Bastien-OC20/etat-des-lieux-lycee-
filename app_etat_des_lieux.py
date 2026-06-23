@@ -35,10 +35,10 @@ VALEURS_KO = {
 VALEURS_OK = {"bon", "tres bon", "presente", "present", "x", "", "none", "nan"}
 
 COULEURS_PRIO = {
-    "CRITIQUE":     "#FF4444",
-    "REMPLACEMENT": "#E67E22",
-    "TRAVAUX":      "#F0A500",
-    "A VERIFIER":   "#888888",
+    "CRITIQUE":     "#C0392B",  # 5,41:1 sur blanc, 4,78:1 sur fond rose  (RGAA ✅)
+    "REMPLACEMENT": "#A04000",  # 6,55:1 sur blanc, 5,99:1 sur fond orange (RGAA ✅)
+    "TRAVAUX":      "#7D6608",  # 5,59:1 sur blanc, 5,44:1 sur fond jaune  (RGAA ✅)
+    "A VERIFIER":   "#5D5D5D",  # 6,86:1 sur blanc                         (RGAA ✅)
 }
 FONDS_PRIO = {
     "CRITIQUE":     "#FFEBEB",
@@ -240,10 +240,10 @@ def generer_xlsx(df: pd.DataFrame) -> bytes:
             "A VERIFIER":   PatternFill("solid", fgColor="F5F5F5"),
         }
         FONTS = {
-            "CRITIQUE":     Font(bold=True, color="CC0000"),
-            "REMPLACEMENT": Font(bold=True, color="B7620A"),
-            "TRAVAUX":      Font(bold=True, color="B8860B"),
-            "A VERIFIER":   Font(bold=True, color="888888"),
+            "CRITIQUE":     Font(bold=True, color="C0392B"),
+            "REMPLACEMENT": Font(bold=True, color="A04000"),
+            "TRAVAUX":      Font(bold=True, color="7D6608"),
+            "A VERIFIER":   Font(bold=True, color="5D5D5D"),
         }
         header_fill = PatternFill("solid", fgColor="1A3C6E")
         header_font = Font(bold=True, color="FFFFFF")
@@ -285,7 +285,7 @@ st.markdown("""
         border-left: 5px solid; text-align: center;
     }
     .kpi-num { font-size: 2.2rem; font-weight: 800; line-height: 1; }
-    .kpi-label { font-size: 0.8rem; color: #666; margin-top: 4px; }
+    .kpi-label { font-size: 0.875rem; color: #555; margin-top: 4px; }
     .salle-header {
         background: #1A3C6E; color: white; padding: 0.4rem 0.8rem;
         border-radius: 6px; font-weight: 700; margin: 0.8rem 0 0.3rem;
@@ -294,13 +294,17 @@ st.markdown("""
         display: inline-block; padding: 2px 10px; border-radius: 20px;
         font-size: 0.75rem; font-weight: 700;
     }
-    div[data-testid="stSidebarContent"] { background: #F0F4F8; }
+    div[data-testid="stSidebarContent"] { background: #EBF0F8; }
 </style>
 """, unsafe_allow_html=True)
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.image("https://img.icons8.com/color/96/school.png", width=60)
+    col_logo1, col_logo2 = st.columns(2)
+    with col_logo1:
+        st.image("logo.png", use_container_width=True)
+    with col_logo2:
+        st.image("LOL.jpg", use_container_width=True)
     st.markdown("## 🏫 Etat des lieux Lycee")
     st.divider()
 
@@ -406,9 +410,9 @@ with tab_dash:
     kpis = [
         (c1, total,     "Total",          "#1A3C6E"),
         (c2, critiques, "Critiques 🔴",   "#CC0000"),
-        (c3, remplace,  "Remplacements 🟠","#E67E22"),
-        (c4, travaux,   "Travaux 🟡",     "#F0A500"),
-        (c5, traites,   "Traitees ✅",    "#27AE60"),
+        (c3, remplace,  "Remplacements 🟠","#A04000"),
+        (c4, travaux,   "Travaux 🟡",     "#7D6608"),
+        (c5, traites,   "Traitees ✅",    "#1E8449"),
         (c6, nb_salles, "Salles",         "#1A3C6E"),
     ]
     for col, val, label, color in kpis:
