@@ -1,23 +1,61 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Etat des lieux lycee - Liste des interventions par salle
+interventions_lycee.py
+======================
+Script en ligne de commande (CLI) pour analyser le fichier Excel
+"Etat_des_lieux_2025_2026.xlsx" et lister toutes les interventions
+a entreprendre dans le lycee.
 
-Usage :
+Contrairement a app.py (interface web Streamlit), ce script fonctionne
+directement dans un terminal, sans navigateur ni serveur. Il est adapte
+a une utilisation en automatisation (cron, scripts batch, CI/CD).
+
+Fonctionnement
+--------------
+1. Lecture du fichier Excel (ligne d'en-tete a la ligne 2, salles en colonne A).
+2. Pour chaque cellule, la valeur est normalisee (minuscules, sans accents)
+   et comparee aux mots-cles VALEURS_KO (ex: "manquant", "a changer", "deteriore").
+3. Chaque correspondance genere une intervention classee par priorite :
+     R (rouge)  -> CRITIQUE     : element manquant ou deteriore
+     O (orange) -> REMPLACEMENT : element a changer ou piles a remplacer
+     Y (jaune)  -> TRAVAUX      : travaux a prevoir, dalles abimees
+     W (blanc)  -> A VERIFIER   : valeur non reconnue, a controler manuellement
+4. Le rapport est affiche dans le terminal et/ou exporte en fichier Word (.docx).
+
+Dependances
+-----------
+  - openpyxl  : lecture du fichier Excel  (pip install openpyxl)
+  - python-docx : export Word             (pip install python-docx, optionnel)
+
+Usage
+-----
   python interventions_lycee.py [options]
 
-Options :
+Options
+-------
   -f / --fichier   Chemin vers le fichier xlsx
                    (defaut : meme dossier que le script)
   -s / --salle     Filtrer sur une salle  ex: --salle 106
   -d / --docx      Exporter le rapport en fichier Word (.docx)
   -o / --sortie    Nom du fichier de sortie (defaut : interventions_lycee.docx)
 
-Exemples :
+Exemples
+--------
+  # Afficher toutes les interventions dans le terminal
   python interventions_lycee.py
+
+  # Filtrer sur la salle Foyer
   python interventions_lycee.py --salle Foyer
+
+  # Generer un rapport Word complet
   python interventions_lycee.py --docx
-  python interventions_lycee.py --docx --sortie rapport_juin2026.docx
+
+  # Rapport Word filtre sur la salle 106, nom de fichier personnalise
+  python interventions_lycee.py --salle 106 --docx --sortie rapport_106.docx
+
+  # Utiliser un fichier Excel different
+  python interventions_lycee.py --fichier /chemin/vers/mon_fichier.xlsx --docx
 """
 
 import sys
@@ -26,6 +64,7 @@ import unicodedata
 from pathlib import Path
 from datetime import date
 
+
 # ── Dependances ────────────────────────────────────────────────────────────
 def _check(module, pip):
     try:
@@ -33,6 +72,7 @@ def _check(module, pip):
     except ImportError:
         print(f"Module manquant : pip install {pip}")
         sys.exit(1)
+
 
 openpyxl = _check("openpyxl", "openpyxl")
 
@@ -175,7 +215,7 @@ def exporter_docx(salles: list[dict], chemin_sortie: str, filtre: str | None = N
         sys.exit(1)
 
     def hex2rgb(h):
-        return tuple(int(h[i : i + 2], 16) for i in (0, 2, 4))
+        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
     def set_cell_bg(cell, hex_color):
         tc = cell._tc

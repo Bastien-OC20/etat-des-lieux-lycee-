@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m flake8 *.py --max-line-length=120)",
+      "Bash(python -m flake8 *.py --select=E501 --max-line-length=120)",
+      "Bash(python -m flake8 *.py --select=E501)",
+      "Bash(python -m flake8 *.py --select=E501 --max-line-length=88)",
+      "Bash(python -m flake8 *.py)"
+    ]
+  }
+}
