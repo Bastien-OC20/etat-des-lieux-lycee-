@@ -8,7 +8,6 @@ import streamlit as st
 
 from constants import (
     COULEURS_PRIO,
-    FONDS_PRIO,
     ORDRE_PRIO,
     ORDRE_PRIO_MAP,
 )
@@ -147,8 +146,15 @@ def render_tab_liste(df: pd.DataFrame) -> None:
         {True: "✅ Oui", False: "⏳ Non"}
     )
 
+    FONDS_DOUX = {
+        "CRITIQUE":     "#FAE5E5",
+        "REMPLACEMENT": "#FAF0E0",
+        "TRAVAUX":      "#FAF8DC",
+        "A VERIFIER":   "#EBEBEB",
+    }
+
     def coloriser_ligne(row):
-        bg = FONDS_PRIO.get(row["Priorite"], "#FFFFFF")
+        bg = FONDS_DOUX.get(row["Priorite"], "#F9FAFB")
         return [f"background-color: {bg}"] * len(row)
 
     styled = df_display.style.apply(coloriser_ligne, axis=1)
@@ -188,19 +194,25 @@ def render_tab_salle(df: pd.DataFrame, salles_sel: list) -> None:
             ).iterrows():
                 prio = row["Priorite"]
                 color = COULEURS_PRIO.get(prio, "#888")
-                fond = FONDS_PRIO.get(prio, "#FFF")
                 trait_badge = (
-                    '<span style="color:#1E8449;font-weight:700"> ✅ Traite</span>'
+                    '<span style="background:#1E8449;color:#FFF;'
+                    'padding:1px 8px;border-radius:3px;'
+                    'font-size:0.75rem;font-weight:700;'
+                    'margin-left:6px"> ✅ Traite</span>'
                     if row["Traite"] else ""
                 )
                 html = (
-                    f'<div style="background:{fond};'
+                    f'<div style="background:#F9FAFB;'
                     f'border-left:4px solid {color};'
                     f'padding:6px 12px;border-radius:4px;'
                     f'margin:4px 0;font-size:0.9rem">'
-                    f'<b style="color:{color}">{row["Emoji"]} {prio}</b>'
-                    f' &nbsp;|&nbsp;'
-                    f'<b>{row["Element"]}</b> &nbsp;&mdash;&nbsp; {row["Valeur"]}'
+                    f'<span style="background:{color};color:#FFF;'
+                    f'padding:1px 8px;border-radius:3px;'
+                    f'font-size:0.75rem;font-weight:700">'
+                    f'{row["Emoji"]} {prio}</span>'
+                    f' <b style="color:#1A3C6E">{row["Element"]}</b>'
+                    f' <span style="color:#555">'
+                    f'&mdash; {row["Valeur"]}</span>'
                     f'{trait_badge}</div>'
                 )
                 st.markdown(html, unsafe_allow_html=True)
@@ -263,7 +275,6 @@ def render_tab_edition() -> None:
         idx = row.name
         prio = row["Priorite"]
         color = COULEURS_PRIO.get(prio, "#888")
-        fond = FONDS_PRIO.get(prio, "#FFF")
 
         col_check, col_info = st.columns([1, 11])
         with col_check:
@@ -275,14 +286,18 @@ def render_tab_edition() -> None:
             st.session_state.traites[idx] = checked
         with col_info:
             html = (
-                f'<div style="background:{fond};'
+                f'<div style="background:#F9FAFB;'
                 f'border-left:4px solid {color};'
                 f'padding:5px 10px;border-radius:4px;'
                 f'margin:2px 0;font-size:0.88rem">'
-                f'<b style="color:{color}">{row["Emoji"]} {prio}</b>'
-                f' &nbsp;|&nbsp;'
-                f'<b>{row["Salle"]}</b> &gt; {row["Element"]}'
-                f' &nbsp;&mdash;&nbsp; {row["Valeur"]}'
+                f'<span style="background:{color};color:#FFF;'
+                f'padding:1px 8px;border-radius:3px;'
+                f'font-size:0.75rem;font-weight:700">'
+                f'{row["Emoji"]} {prio}</span>'
+                f' <b style="color:#1A3C6E">{row["Salle"]}</b>'
+                f' &gt; <b>{row["Element"]}</b>'
+                f' <span style="color:#555">'
+                f'&mdash; {row["Valeur"]}</span>'
                 f'</div>'
             )
             st.markdown(html, unsafe_allow_html=True)

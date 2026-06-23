@@ -50,7 +50,7 @@ st.markdown("""
         display: inline-block; padding: 2px 10px; border-radius: 20px;
         font-size: 0.75rem; font-weight: 700;
     }
-    div[data-testid="stSidebarContent"] { background: #EBF0F8; }
+    div[data-testid="stSidebarContent"] { background: #F4F4F2; }
 </style>
 """, unsafe_allow_html=True)
 
