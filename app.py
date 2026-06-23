@@ -28,7 +28,8 @@ st.set_page_config(
 )
 
 # ── CSS personnalise ───────────────────────────────────────────────────────────
-st.markdown("""
+st.markdown(
+    """
 <style>
     .main-title {
         font-size: 2rem; font-weight: 800; color: #1A3C6E;
@@ -50,14 +51,17 @@ st.markdown("""
         display: inline-block; padding: 2px 10px; border-radius: 20px;
         font-size: 0.75rem; font-weight: 700;
     }
-    div[data-testid="stSidebarContent"] { background: #F4F4F2; }
+    div[data-testid="stSidebarContent"] { background: #FFFF; }
     div[data-testid="stSidebarContent"] h1,
     div[data-testid="stSidebarContent"] h2,
-    div[data-testid="stSidebarContent"] h3 {
+    div[data-testid="stSidebarContent"] h3,
+    div[data-testid="stSidebarContent"] p{
         color: #000000 !important;
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
