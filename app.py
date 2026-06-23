@@ -51,6 +51,11 @@ st.markdown("""
         font-size: 0.75rem; font-weight: 700;
     }
     div[data-testid="stSidebarContent"] { background: #F4F4F2; }
+    div[data-testid="stSidebarContent"] h1,
+    div[data-testid="stSidebarContent"] h2,
+    div[data-testid="stSidebarContent"] h3 {
+        color: #000000 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 

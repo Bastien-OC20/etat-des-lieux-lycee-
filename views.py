@@ -146,16 +146,8 @@ def render_tab_liste(df: pd.DataFrame) -> None:
         {True: "✅ Oui", False: "⏳ Non"}
     )
 
-    FONDS_DOUX = {
-        "CRITIQUE":     "#FAE5E5",
-        "REMPLACEMENT": "#FAF0E0",
-        "TRAVAUX":      "#FAF8DC",
-        "A VERIFIER":   "#EBEBEB",
-    }
-
     def coloriser_ligne(row):
-        bg = FONDS_DOUX.get(row["Priorite"], "#F9FAFB")
-        return [f"background-color: {bg}"] * len(row)
+        return ["background-color: #111111; color: #FFFFFF"] * len(row)
 
     styled = df_display.style.apply(coloriser_ligne, axis=1)
     st.dataframe(styled, use_container_width=True, height=500, hide_index=True)
@@ -286,7 +278,7 @@ def render_tab_edition() -> None:
             st.session_state.traites[idx] = checked
         with col_info:
             html = (
-                f'<div style="background:#F9FAFB;'
+                f'<div style="background:#FFFFFF;'
                 f'border-left:4px solid {color};'
                 f'padding:5px 10px;border-radius:4px;'
                 f'margin:2px 0;font-size:0.88rem">'
@@ -294,9 +286,9 @@ def render_tab_edition() -> None:
                 f'padding:1px 8px;border-radius:3px;'
                 f'font-size:0.75rem;font-weight:700">'
                 f'{row["Emoji"]} {prio}</span>'
-                f' <b style="color:#1A3C6E">{row["Salle"]}</b>'
-                f' &gt; <b>{row["Element"]}</b>'
-                f' <span style="color:#555">'
+                f' <b style="color:#000000">{row["Salle"]}</b>'
+                f' &gt; <b style="color:#000000">{row["Element"]}</b>'
+                f' <span style="color:#000000">'
                 f'&mdash; {row["Valeur"]}</span>'
                 f'</div>'
             )
