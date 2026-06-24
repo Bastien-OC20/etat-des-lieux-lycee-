@@ -137,6 +137,7 @@ def render_tab_dashboard(df_tout: pd.DataFrame) -> None:
         fig2.update_layout(
             margin=dict(t=10, b=10), height=300,
             coloraxis_showscale=False,
+            xaxis=dict(type="category"),
         )
         st.plotly_chart(fig2, use_container_width=True)
 
