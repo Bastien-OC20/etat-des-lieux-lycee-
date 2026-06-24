@@ -119,11 +119,22 @@ with st.sidebar:
 
         st.divider()
         st.markdown("### 📥 Exports")
+        tri_par = st.radio(
+            "Classer par",
+            options=["Salle", "Element", "Priorite"],
+            format_func=lambda x: {
+                "Salle": "🏫 Classe / Salle",
+                "Element": "🔧 Type d'intervention",
+                "Priorite": "🚨 Urgence",
+            }[x],
+            horizontal=False,
+        )
     else:
         salles_sel = []
         prios_sel = ORDRE_PRIO
         elements_sel = []
         afficher_traites = True
+        tri_par = "Salle"
 
 # ── Page d'accueil (sans fichier) ─────────────────────────────────────────────
 if not fichier:
@@ -185,7 +196,7 @@ with st.sidebar:
     df_export["Traite"] = df_export.index.map(st.session_state.traites)
 
     try:
-        docx_bytes = generer_docx(df_export)
+        docx_bytes = generer_docx(df_export, tri_par=tri_par)
         st.download_button(
             label="📄 Telecharger Word (.docx)",
             data=docx_bytes,
@@ -201,7 +212,7 @@ with st.sidebar:
     except ImportError:
         st.warning("python-docx requis : pip install python-docx")
 
-    xlsx_bytes = generer_xlsx(df_export)
+    xlsx_bytes = generer_xlsx(df_export, tri_par=tri_par)
     st.download_button(
         label="📊 Telecharger Excel (.xlsx)",
         data=xlsx_bytes,
@@ -216,4 +227,3 @@ with st.sidebar:
     )
 
     st.divider()
-    st.caption("pip install streamlit openpyxl python-docx plotly pandas")

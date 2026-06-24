@@ -10,7 +10,7 @@ import pandas as pd
 from constants import COULEURS_PRIO, FONDS_PRIO
 
 
-def generer_docx(df: pd.DataFrame) -> bytes:
+def generer_docx(df: pd.DataFrame, tri_par: str = "Salle") -> bytes:
     from docx import Document
     from docx.shared import Pt, RGBColor, Cm
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -90,48 +90,94 @@ def generer_docx(df: pd.DataFrame) -> bytes:
     p_stat.alignment = WD_ALIGN_PARAGRAPH.CENTER
     doc.add_paragraph()
 
-    for salle in df["Salle"].unique():
-        df_s = df[df["Salle"] == salle]
+    # Configuration selon le tri choisi
+    TRI_CONFIG = {
+        "Salle": {
+            "col": "Salle",
+            "label": "Salle",
+            "headers": ["Element", "Valeur originale", "Priorite", "Statut"],
+            "row_cols": ["Element", "Valeur", "Priorite"],
+            "sort_within": "Priorite",
+            "widths": [5, 5, 3.5, 2.5],
+        },
+        "Element": {
+            "col": "Element",
+            "label": "Type d'intervention",
+            "headers": ["Salle", "Valeur originale", "Priorite", "Statut"],
+            "row_cols": ["Salle", "Valeur", "Priorite"],
+            "sort_within": "Priorite",
+            "widths": [4, 5, 4, 3],
+        },
+        "Priorite": {
+            "col": "Priorite",
+            "label": "Urgence",
+            "headers": ["Salle", "Element", "Valeur originale", "Statut"],
+            "row_cols": ["Salle", "Element", "Valeur"],
+            "sort_within": "Salle",
+            "widths": [4, 4.5, 5, 2.5],
+        },
+    }
+    cfg = TRI_CONFIG.get(tri_par, TRI_CONFIG["Salle"])
+
+    groupes = (
+        df["Priorite"].map(
+            {"CRITIQUE": 0, "REMPLACEMENT": 1, "TRAVAUX": 2, "A VERIFIER": 3}
+        ).fillna(99)
+        if tri_par == "Priorite"
+        else None
+    )
+
+    if tri_par == "Priorite":
+        ordered = df.assign(_ordre=groupes).sort_values("_ordre")["Priorite"].unique()
+    else:
+        ordered = sorted(df[cfg["col"]].unique())
+
+    for groupe_val in ordered:
+        df_g = df[df[cfg["col"]] == groupe_val]
         p_hdr = doc.add_paragraph()
         r_hdr = p_hdr.add_run(
-            f"  Salle : {salle}  ({len(df_s)} intervention(s))"
+            f"  {cfg['label']} : {groupe_val}  ({len(df_g)} intervention(s))"
         )
         r_hdr.bold = True
         r_hdr.font.size = Pt(12)
         r_hdr.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-        set_para_bg(p_hdr, "1A3C6E")
+        bg_hdr = FONDS_PRIO.get(groupe_val, "#1A3C6E").lstrip("#") if tri_par == "Priorite" else "1A3C6E"
+        set_para_bg(p_hdr, bg_hdr)
+        if tri_par == "Priorite":
+            tc_hdr = COULEURS_PRIO.get(groupe_val, "#FFFFFF").lstrip("#")
+            r_hdr.font.color.rgb = RGBColor(*hex2rgb(tc_hdr))
 
         table = doc.add_table(rows=1, cols=4)
         table.style = "Table Grid"
-        headers = ["Element", "Valeur originale", "Priorite", "Statut"]
-        for cell, label in zip(table.rows[0].cells, headers):
+        for cell, label in zip(table.rows[0].cells, cfg["headers"]):
             cell.text = label
             set_cell_bg(cell, "D5E8F0")
             cell.paragraphs[0].runs[0].bold = True
             cell.paragraphs[0].runs[0].font.size = Pt(9)
 
-        for _, row in df_s.sort_values("Priorite").iterrows():
+        for _, row in df_g.sort_values(cfg["sort_within"]).iterrows():
             cells = table.add_row().cells
-            cells[0].text = str(row["Element"])
-            cells[1].text = str(row["Valeur"])
-            cells[2].text = str(row["Priorite"])
+            for i, col in enumerate(cfg["row_cols"]):
+                cells[i].text = str(row[col])
             cells[3].text = "✓ Traite" if row.get("Traite") else "En attente"
 
-            bg = FONDS_PRIO.get(row["Priorite"], "#F5F5F5").lstrip("#")
-            tc_hex = COULEURS_PRIO.get(row["Priorite"], "#888888").lstrip("#")
-            set_cell_bg(cells[2], bg)
-            r_prio = cells[2].paragraphs[0].runs[0]
-            r_prio.bold = True
-            r_prio.font.size = Pt(9)
-            r_prio.font.color.rgb = RGBColor(*hex2rgb(tc_hex))
+            prio_val = row["Priorite"]
+            bg = FONDS_PRIO.get(prio_val, "#F5F5F5").lstrip("#")
+            tc_hex = COULEURS_PRIO.get(prio_val, "#888888").lstrip("#")
+            prio_cell_idx = cfg["row_cols"].index("Priorite") if "Priorite" in cfg["row_cols"] else None
+            if prio_cell_idx is not None:
+                set_cell_bg(cells[prio_cell_idx], bg)
+                r_prio = cells[prio_cell_idx].paragraphs[0].runs[0]
+                r_prio.bold = True
+                r_prio.font.size = Pt(9)
+                r_prio.font.color.rgb = RGBColor(*hex2rgb(tc_hex))
             for c in cells:
-                c.paragraphs[0].runs[0].font.size = Pt(9)
+                if c.paragraphs[0].runs:
+                    c.paragraphs[0].runs[0].font.size = Pt(9)
 
-        for row in table.rows:
-            row.cells[0].width = Cm(5)
-            row.cells[1].width = Cm(5)
-            row.cells[2].width = Cm(3.5)
-            row.cells[3].width = Cm(2.5)
+        for i, w in enumerate(cfg["widths"]):
+            for row in table.rows:
+                row.cells[i].width = Cm(w)
 
         doc.add_paragraph()
 
@@ -140,7 +186,7 @@ def generer_docx(df: pd.DataFrame) -> bytes:
     return buf.getvalue()
 
 
-def generer_xlsx(df: pd.DataFrame) -> bytes:
+def generer_xlsx(df: pd.DataFrame, tri_par: str = "Salle") -> bytes:
     from openpyxl.styles import PatternFill, Font, Alignment
 
     FILLS = {
@@ -156,6 +202,8 @@ def generer_xlsx(df: pd.DataFrame) -> bytes:
         "A VERIFIER":   Font(bold=True, color="5D5D5D"),
     }
 
+    ORDRE_PRIO_MAP = {"CRITIQUE": 0, "REMPLACEMENT": 1, "TRAVAUX": 2, "A VERIFIER": 3}
+
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
         export_df = df[
@@ -164,6 +212,13 @@ def generer_xlsx(df: pd.DataFrame) -> bytes:
         export_df["Traite"] = export_df["Traite"].map(
             {True: "Oui", False: "Non"}
         )
+        if tri_par == "Priorite":
+            export_df["_ordre"] = export_df["Priorite"].map(ORDRE_PRIO_MAP).fillna(99)
+            export_df = export_df.sort_values(["_ordre", "Salle", "Element"]).drop(columns="_ordre")
+        elif tri_par == "Element":
+            export_df = export_df.sort_values(["Element", "Priorite", "Salle"])
+        else:
+            export_df = export_df.sort_values(["Salle", "Priorite", "Element"])
         export_df.to_excel(writer, index=False, sheet_name="Interventions")
 
         ws = writer.sheets["Interventions"]
