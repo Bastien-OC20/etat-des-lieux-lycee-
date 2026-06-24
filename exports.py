@@ -7,21 +7,32 @@ from datetime import date
 
 import pandas as pd
 
-from constants import COULEURS_PRIO, FONDS_PRIO
+from constants import (
+    ANNEE_SCOLAIRE,
+    COULEURS_PRIO,
+    FONDS_PRIO,
+    ORDRE_PRIO_MAP,
+    hex2rgb,
+)
 
 
 def generer_docx(df: pd.DataFrame, tri_par: str = "Salle") -> bytes:
+    """Genere un rapport Word (.docx) des interventions.
+
+    Args:
+        df: DataFrame des interventions avec colonne Traite.
+        tri_par: cle de regroupement — 'Salle', 'Element' ou 'Priorite'.
+
+    Returns:
+        Contenu binaire du fichier .docx.
+    """
     from docx import Document
     from docx.shared import Pt, RGBColor, Cm
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
 
-    def hex2rgb(h):
-        h = h.lstrip("#")
-        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
-
-    def set_cell_bg(cell, hex_color):
+    def set_cell_bg(cell, hex_color: str) -> None:
         hex_color = hex_color.lstrip("#")
         tc = cell._tc
         tcPr = tc.get_or_add_tcPr()
@@ -31,7 +42,7 @@ def generer_docx(df: pd.DataFrame, tri_par: str = "Salle") -> bytes:
         shd.set(qn("w:fill"), hex_color)
         tcPr.append(shd)
 
-    def set_para_bg(para, hex_color):
+    def set_para_bg(para, hex_color: str) -> None:
         hex_color = hex_color.lstrip("#")
         pPr = para._p.get_or_add_pPr()
         shd = OxmlElement("w:shd")
@@ -40,7 +51,7 @@ def generer_docx(df: pd.DataFrame, tri_par: str = "Salle") -> bytes:
         shd.set(qn("w:fill"), hex_color)
         pPr.append(shd)
 
-    def add_border_bottom(para, color="1A3C6E"):
+    def add_border_bottom(para, color: str = "1A3C6E") -> None:
         pPr = para._p.get_or_add_pPr()
         pBdr = OxmlElement("w:pBdr")
         b = OxmlElement("w:bottom")
@@ -69,7 +80,7 @@ def generer_docx(df: pd.DataFrame, tri_par: str = "Salle") -> bytes:
 
     p2 = doc.add_paragraph()
     date_str = date.today().strftime('%d/%m/%Y')
-    p2.add_run(f"Lycee - Annee 2025/2026  |  Genere le {date_str}")
+    p2.add_run(f"Lycee - Annee {ANNEE_SCOLAIRE}  |  Genere le {date_str}")
     p2.runs[0].font.size = Pt(10)
     p2.runs[0].font.color.rgb = RGBColor(0x88, 0x88, 0x88)
     p2.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -90,7 +101,6 @@ def generer_docx(df: pd.DataFrame, tri_par: str = "Salle") -> bytes:
     p_stat.alignment = WD_ALIGN_PARAGRAPH.CENTER
     doc.add_paragraph()
 
-    # Configuration selon le tri choisi
     TRI_CONFIG = {
         "Salle": {
             "col": "Salle",
@@ -119,16 +129,12 @@ def generer_docx(df: pd.DataFrame, tri_par: str = "Salle") -> bytes:
     }
     cfg = TRI_CONFIG.get(tri_par, TRI_CONFIG["Salle"])
 
-    groupes = (
-        df["Priorite"].map(
-            {"CRITIQUE": 0, "REMPLACEMENT": 1, "TRAVAUX": 2, "A VERIFIER": 3}
-        ).fillna(99)
-        if tri_par == "Priorite"
-        else None
-    )
-
     if tri_par == "Priorite":
-        ordered = df.assign(_ordre=groupes).sort_values("_ordre")["Priorite"].unique()
+        ordered = (
+            df.assign(_ordre=df["Priorite"].map(ORDRE_PRIO_MAP).fillna(99))
+            .sort_values("_ordre")["Priorite"]
+            .unique()
+        )
     else:
         ordered = sorted(df[cfg["col"]].unique())
 
@@ -140,12 +146,17 @@ def generer_docx(df: pd.DataFrame, tri_par: str = "Salle") -> bytes:
         )
         r_hdr.bold = True
         r_hdr.font.size = Pt(12)
-        r_hdr.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-        bg_hdr = FONDS_PRIO.get(groupe_val, "#1A3C6E").lstrip("#") if tri_par == "Priorite" else "1A3C6E"
+        bg_hdr = (
+            FONDS_PRIO.get(groupe_val, "#1A3C6E").lstrip("#")
+            if tri_par == "Priorite"
+            else "1A3C6E"
+        )
         set_para_bg(p_hdr, bg_hdr)
         if tri_par == "Priorite":
-            tc_hdr = COULEURS_PRIO.get(groupe_val, "#FFFFFF").lstrip("#")
+            tc_hdr = COULEURS_PRIO.get(groupe_val, "#FFFFFF")
             r_hdr.font.color.rgb = RGBColor(*hex2rgb(tc_hdr))
+        else:
+            r_hdr.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
 
         table = doc.add_table(rows=1, cols=4)
         table.style = "Table Grid"
@@ -163,8 +174,12 @@ def generer_docx(df: pd.DataFrame, tri_par: str = "Salle") -> bytes:
 
             prio_val = row["Priorite"]
             bg = FONDS_PRIO.get(prio_val, "#F5F5F5").lstrip("#")
-            tc_hex = COULEURS_PRIO.get(prio_val, "#888888").lstrip("#")
-            prio_cell_idx = cfg["row_cols"].index("Priorite") if "Priorite" in cfg["row_cols"] else None
+            tc_hex = COULEURS_PRIO.get(prio_val, "#888888")
+            prio_cell_idx = (
+                cfg["row_cols"].index("Priorite")
+                if "Priorite" in cfg["row_cols"]
+                else None
+            )
             if prio_cell_idx is not None:
                 set_cell_bg(cells[prio_cell_idx], bg)
                 r_prio = cells[prio_cell_idx].paragraphs[0].runs[0]
@@ -187,22 +202,26 @@ def generer_docx(df: pd.DataFrame, tri_par: str = "Salle") -> bytes:
 
 
 def generer_xlsx(df: pd.DataFrame, tri_par: str = "Salle") -> bytes:
+    """Genere un tableur Excel (.xlsx) des interventions.
+
+    Args:
+        df: DataFrame des interventions avec colonne Traite.
+        tri_par: cle de tri — 'Salle', 'Element' ou 'Priorite'.
+
+    Returns:
+        Contenu binaire du fichier .xlsx.
+    """
     from openpyxl.styles import PatternFill, Font, Alignment
 
+    # Styles derives des constantes partagees (pas de duplication)
     FILLS = {
-        "CRITIQUE":     PatternFill("solid", fgColor="FFEBEB"),
-        "REMPLACEMENT": PatternFill("solid", fgColor="FFF3E0"),
-        "TRAVAUX":      PatternFill("solid", fgColor="FFFDE7"),
-        "A VERIFIER":   PatternFill("solid", fgColor="F5F5F5"),
+        prio: PatternFill("solid", fgColor=FONDS_PRIO[prio].lstrip("#"))
+        for prio in FONDS_PRIO
     }
     FONTS = {
-        "CRITIQUE":     Font(bold=True, color="C0392B"),
-        "REMPLACEMENT": Font(bold=True, color="A04000"),
-        "TRAVAUX":      Font(bold=True, color="7D6608"),
-        "A VERIFIER":   Font(bold=True, color="5D5D5D"),
+        prio: Font(bold=True, color=COULEURS_PRIO[prio].lstrip("#"))
+        for prio in COULEURS_PRIO
     }
-
-    ORDRE_PRIO_MAP = {"CRITIQUE": 0, "REMPLACEMENT": 1, "TRAVAUX": 2, "A VERIFIER": 3}
 
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
@@ -213,8 +232,13 @@ def generer_xlsx(df: pd.DataFrame, tri_par: str = "Salle") -> bytes:
             {True: "Oui", False: "Non"}
         )
         if tri_par == "Priorite":
-            export_df["_ordre"] = export_df["Priorite"].map(ORDRE_PRIO_MAP).fillna(99)
-            export_df = export_df.sort_values(["_ordre", "Salle", "Element"]).drop(columns="_ordre")
+            export_df["_ordre"] = (
+                export_df["Priorite"].map(ORDRE_PRIO_MAP).fillna(99)
+            )
+            export_df = (
+                export_df.sort_values(["_ordre", "Salle", "Element"])
+                .drop(columns="_ordre")
+            )
         elif tri_par == "Element":
             export_df = export_df.sort_values(["Element", "Priorite", "Salle"])
         else:

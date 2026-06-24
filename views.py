@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """Rendu des quatre onglets de l'application."""
 
+import html as _html
+
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -13,7 +15,55 @@ from constants import (
 )
 
 
+def _card_salle_html(row: pd.Series) -> str:
+    """Construit la carte HTML d'une intervention pour la vue par salle."""
+    prio = row["Priorite"]
+    color = COULEURS_PRIO.get(prio, "#888")
+    element = _html.escape(str(row["Element"]))
+    valeur = _html.escape(str(row["Valeur"]))
+    prio_safe = _html.escape(str(prio))
+    trait_badge = (
+        '<span style="background:#1E8449;color:#FFF;'
+        'padding:1px 8px;border-radius:3px;'
+        'font-size:0.75rem;font-weight:700;'
+        'margin-left:6px"> ✅ Traite</span>'
+        if row["Traite"] else ""
+    )
+    return (
+        f'<div style="background:#F9FAFB;border-left:4px solid {color};'
+        f'padding:6px 12px;border-radius:4px;margin:4px 0;font-size:0.9rem">'
+        f'<span style="background:{color};color:#FFF;padding:1px 8px;'
+        f'border-radius:3px;font-size:0.75rem;font-weight:700">'
+        f'{row["Emoji"]} {prio_safe}</span>'
+        f' <b style="color:#1A3C6E">{element}</b>'
+        f' <span style="color:#555">&mdash; {valeur}</span>'
+        f'{trait_badge}</div>'
+    )
+
+
+def _card_edition_html(row: pd.Series) -> str:
+    """Construit la carte HTML d'une intervention pour la vue edition."""
+    prio = row["Priorite"]
+    color = COULEURS_PRIO.get(prio, "#888")
+    salle = _html.escape(str(row["Salle"]))
+    element = _html.escape(str(row["Element"]))
+    valeur = _html.escape(str(row["Valeur"]))
+    prio_safe = _html.escape(str(prio))
+    return (
+        f'<div style="background:#FFFFFF;border-left:4px solid {color};'
+        f'padding:5px 10px;border-radius:4px;margin:2px 0;font-size:0.88rem">'
+        f'<span style="background:{color};color:#FFF;padding:1px 8px;'
+        f'border-radius:3px;font-size:0.75rem;font-weight:700">'
+        f'{row["Emoji"]} {prio_safe}</span>'
+        f' <b style="color:#000000">{salle}</b>'
+        f' &gt; <b style="color:#000000">{element}</b>'
+        f' <span style="color:#000000">&mdash; {valeur}</span>'
+        f'</div>'
+    )
+
+
 def render_tab_dashboard(df_tout: pd.DataFrame) -> None:
+    """Affiche le tableau de bord avec KPIs et graphiques."""
     st.markdown(
         '<div class="main-title">📊 Tableau de bord</div>',
         unsafe_allow_html=True,
@@ -110,6 +160,7 @@ def render_tab_dashboard(df_tout: pd.DataFrame) -> None:
 
 
 def render_tab_liste(df: pd.DataFrame) -> None:
+    """Affiche la liste paginee des interventions avec tri interactif."""
     st.markdown(
         f'<div class="main-title">📋 Interventions ({len(df)})</div>',
         unsafe_allow_html=True,
@@ -154,6 +205,7 @@ def render_tab_liste(df: pd.DataFrame) -> None:
 
 
 def render_tab_salle(df: pd.DataFrame, salles_sel: list) -> None:
+    """Affiche les interventions groupees par salle sous forme de cartes."""
     st.markdown(
         '<div class="main-title">🏠 Vue par salle</div>',
         unsafe_allow_html=True,
@@ -180,37 +232,16 @@ def render_tab_salle(df: pd.DataFrame, salles_sel: list) -> None:
             + (f"  |  ✅ {nb_trait} traitee(s)" if nb_trait else ""),
             expanded=(nb_crit > 0),
         ):
-            for _, row in df_s.sort_values(
-                "Priorite",
-                key=lambda x: x.map(ORDRE_PRIO_MAP),
-            ).iterrows():
-                prio = row["Priorite"]
-                color = COULEURS_PRIO.get(prio, "#888")
-                trait_badge = (
-                    '<span style="background:#1E8449;color:#FFF;'
-                    'padding:1px 8px;border-radius:3px;'
-                    'font-size:0.75rem;font-weight:700;'
-                    'margin-left:6px"> ✅ Traite</span>'
-                    if row["Traite"] else ""
-                )
-                html = (
-                    f'<div style="background:#F9FAFB;'
-                    f'border-left:4px solid {color};'
-                    f'padding:6px 12px;border-radius:4px;'
-                    f'margin:4px 0;font-size:0.9rem">'
-                    f'<span style="background:{color};color:#FFF;'
-                    f'padding:1px 8px;border-radius:3px;'
-                    f'font-size:0.75rem;font-weight:700">'
-                    f'{row["Emoji"]} {prio}</span>'
-                    f' <b style="color:#1A3C6E">{row["Element"]}</b>'
-                    f' <span style="color:#555">'
-                    f'&mdash; {row["Valeur"]}</span>'
-                    f'{trait_badge}</div>'
-                )
-                st.markdown(html, unsafe_allow_html=True)
+            df_sorted = df_s.sort_values(
+                "Priorite", key=lambda x: x.map(ORDRE_PRIO_MAP)
+            )
+            # Batch : une seule injection HTML par salle au lieu de N appels
+            cards = df_sorted.apply(_card_salle_html, axis=1)
+            st.markdown("\n".join(cards), unsafe_allow_html=True)
 
 
 def render_tab_edition() -> None:
+    """Permet de cocher les interventions traitees et de suivre la progression."""
     st.markdown(
         '<div class="main-title">✅ Gestion des traitements</div>',
         unsafe_allow_html=True,
@@ -263,11 +294,9 @@ def render_tab_edition() -> None:
         key=lambda x: x.map(ORDRE_PRIO_MAP),
     )
 
+    # Les checkboxes sont des widgets interactifs : boucle obligatoire
     for _, row in df_filtered_edit.iterrows():
         idx = row.name
-        prio = row["Priorite"]
-        color = COULEURS_PRIO.get(prio, "#888")
-
         col_check, col_info = st.columns([1, 11])
         with col_check:
             checked = st.checkbox(
@@ -277,22 +306,7 @@ def render_tab_edition() -> None:
             )
             st.session_state.traites[idx] = checked
         with col_info:
-            html = (
-                f'<div style="background:#FFFFFF;'
-                f'border-left:4px solid {color};'
-                f'padding:5px 10px;border-radius:4px;'
-                f'margin:2px 0;font-size:0.88rem">'
-                f'<span style="background:{color};color:#FFF;'
-                f'padding:1px 8px;border-radius:3px;'
-                f'font-size:0.75rem;font-weight:700">'
-                f'{row["Emoji"]} {prio}</span>'
-                f' <b style="color:#000000">{row["Salle"]}</b>'
-                f' &gt; <b style="color:#000000">{row["Element"]}</b>'
-                f' <span style="color:#000000">'
-                f'&mdash; {row["Valeur"]}</span>'
-                f'</div>'
-            )
-            st.markdown(html, unsafe_allow_html=True)
+            st.markdown(_card_edition_html(row), unsafe_allow_html=True)
 
     total_base = len(st.session_state.df_base)
     nb_traites = sum(st.session_state.traites.values())

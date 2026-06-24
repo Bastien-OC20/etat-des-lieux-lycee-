@@ -9,7 +9,12 @@ from datetime import date
 
 import streamlit as st
 
-from constants import ORDRE_PRIO
+from constants import (
+    ANNEE_SCOLAIRE,
+    LOGO_PRINCIPALE,
+    LOGO_SECONDAIRE,
+    ORDRE_PRIO,
+)
 from data import charger_xlsx
 from exports import generer_docx, generer_xlsx
 from views import (
@@ -67,16 +72,16 @@ st.markdown(
 with st.sidebar:
     col_logo1, col_logo2 = st.columns(2)
     with col_logo1:
-        st.image("logo.png", use_container_width=True)
+        st.image(LOGO_PRINCIPALE, use_container_width=True)
     with col_logo2:
-        st.image("LOL.jpg", use_container_width=True)
+        st.image(LOGO_SECONDAIRE, use_container_width=True)
     st.markdown("## 🏫 Etat des lieux Lycee")
     st.divider()
 
     fichier = st.file_uploader(
         "📂 Charger le fichier Excel",
         type=["xlsx"],
-        help="Fichier Etat_des_lieux_2025_2026.xlsx",
+        help=f"Fichier Etat_des_lieux_{ANNEE_SCOLAIRE.replace('/', '_')}.xlsx",
     )
 
     if fichier:
@@ -86,11 +91,15 @@ with st.sidebar:
         base_absente = "df_base" not in st.session_state
         fichier_change = st.session_state.get("fichier_nom") != fichier.name
         if base_absente or fichier_change:
-            st.session_state.df_base = charger_xlsx(fichier.read())
-            st.session_state.fichier_nom = fichier.name
-            st.session_state.traites = {
-                i: False for i in st.session_state.df_base.index
-            }
+            try:
+                st.session_state.df_base = charger_xlsx(fichier.read())
+                st.session_state.fichier_nom = fichier.name
+                st.session_state.traites = {
+                    i: False for i in st.session_state.df_base.index
+                }
+            except ValueError as e:
+                st.error(f"❌ Erreur lors du chargement : {e}")
+                st.stop()
 
         df_base = st.session_state.df_base.copy()
         df_base["Traite"] = df_base.index.map(st.session_state.traites)
