@@ -129,7 +129,7 @@ def render_tab_dashboard(df_tout: pd.DataFrame) -> None:
             .reset_index(name="nb")
         )
         fig2 = px.bar(
-            top_salles, x="nb", y="Salle", orientation="h",
+            top_salles, x="Salle", y="nb",
             color="nb",
             color_continuous_scale=["#FFFDE7", "#E67E22", "#CC0000"],
             labels={"nb": "Nb interventions", "Salle": ""},
@@ -137,7 +137,6 @@ def render_tab_dashboard(df_tout: pd.DataFrame) -> None:
         fig2.update_layout(
             margin=dict(t=10, b=10), height=300,
             coloraxis_showscale=False,
-            yaxis=dict(autorange="reversed"),
         )
         st.plotly_chart(fig2, use_container_width=True)
 
